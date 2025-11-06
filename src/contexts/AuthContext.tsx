@@ -44,17 +44,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function fetchUserRole(userId: string) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
       .maybeSingle();
 
+    if (error) {
+      console.error('Error fetching user role:', error);
+    }
+
+    console.log('Fetched role data:', data, 'for user:', userId);
     setUserRole(data?.role ?? 'submitter');
     setLoading(false);
   }
 
   async function signUp(email: string, password: string, name: string, role: 'submitter' | 'handler') {
+    console.log('Signing up with role:', role);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -66,12 +72,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
 
     if (data.user) {
+      console.log('Inserting role for user:', data.user.id, 'role:', role);
       const { error: roleError } = await supabase.from('user_roles').insert({
         user_id: data.user.id,
         role
       });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error('Error inserting role:', roleError);
+        throw roleError;
+      }
+      console.log('Role inserted successfully');
+
+      setUserRole(role);
     }
   }
 
